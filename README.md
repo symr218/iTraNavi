@@ -152,6 +152,41 @@ MIT License
 tail -f /tmp/dashboard_app.log  # Linux/Mac
 ```
 
+## 🗄️ データベースとマイグレーション
+
+このプロジェクトでは開発環境で **SQLite**（`dev.db`）を使い、ORMには `Flask-SQLAlchemy`、マイグレーション管理は `Flask-Migrate`（Alembic）を使用します。プロダクションでは環境変数 `DATABASE_URL` を使って PostgreSQL 等に切り替えてください。
+
+セットアップ手順（初回）:
+
+```bash
+# 依存パッケージをインストール
+pip install -r requirements.txt
+
+# Flask アプリの参照を設定（アプリファクトリーを指定）
+export FLASK_APP=app:create_app
+
+# マイグレーション用ディレクトリを初期化（既にある場合は不要）
+flask db init
+
+# モデルの変更を検知してマイグレーションを作成
+flask db migrate -m "create user_session"
+
+# データベースに適用
+flask db upgrade
+```
+
+環境変数でデータベース接続先を指定する例（PostgreSQL 本番想定）:
+
+```bash
+export DATABASE_URL=postgresql+psycopg://user:pass@dbhost:5432/dbname
+```
+
+アクティブユーザーのカウント方法:
+- `UserSession` テーブルで `session_id` と `last_seen` を保持します。
+- ダッシュボードでは「直近5分以内にアクセスがあったセッション」をアクティブユーザーとしてカウントします。
+- 実運用で正確に接続数を追跡する場合は Redis と WebSocket を組み合わせる方法を推奨します。
+
+
 ## 🐛 トラブルシューティング
 
 ### ポートが既に使用されている場合
