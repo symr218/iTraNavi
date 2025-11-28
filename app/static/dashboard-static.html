@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社内改善掲示板 | 静的サンプル</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="board-header">
+            <div>
+                <p class="eyebrow">社内 IT 改善 事例ギャラリー</p>
+                <h1>Improvement Board</h1>
+                <p class="lede">写真と概要を一覧で確認し、クリックで詳細・コメント・グッドができます。</p>
+            </div>
+            <div class="header-actions">
+                <a class="btn primary link-btn" href="dashboard-admin.html">投稿ページを開く</a>
+                <div class="status-chip">静的デモ</div>
+                <div class="timestamp">最終更新: <span id="current-time">--:--:--</span></div>
+                <input id="search-box" class="search-box" placeholder="タイトル・タグ・概要で検索" />
+            </div>
+        </header>
+
+        <section class="board-grid" id="case-list">
+            <!-- JS でカードを差し込み -->
+        </section>
+    </div>
+
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <div class="detail-drawer" id="detail-drawer">
+        <div class="drawer-header">
+            <div>
+                <p class="eyebrow" id="detail-tags">タグ</p>
+                <h2 id="detail-title">タイトル</h2>
+                <p class="lede" id="detail-summary">概要</p>
+            </div>
+            <button class="icon-btn" id="drawer-close" aria-label="閉じる">×</button>
+        </div>
+        <div class="drawer-body">
+            <div class="detail-hero" id="detail-hero"></div>
+            <div class="detail-meta">
+                <span class="pill" id="detail-owner">担当: -</span>
+                <span class="pill" id="detail-impact">効果: -</span>
+                <span class="pill" id="detail-date">公開日: -</span>
+            </div>
+            <article id="detail-body" class="detail-body"></article>
+
+            <div class="social-bar">
+                <button class="btn primary" id="like-btn">👍 グッド <span id="like-count">0</span></button>
+                <div class="comment-count">💬 <span id="comment-count">0</span> 件</div>
+            </div>
+
+            <section class="comments">
+                <h3>コメント</h3>
+                <div id="comment-list" class="comment-list"></div>
+                <form id="comment-form" class="comment-form">
+                    <div class="form-row">
+                        <input type="text" id="comment-name" placeholder="お名前 (任意)" />
+                        <input type="text" id="comment-team" placeholder="所属 (任意)" />
+                    </div>
+                    <textarea id="comment-text" rows="3" placeholder="改善ポイントや感想を残してください"></textarea>
+                    <button type="submit" class="btn">コメントを投稿</button>
+                </form>
+            </section>
+        </div>
+    </div>
+
+    <script src="js/board.js"></script>
+</body>
+</html>
