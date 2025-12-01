@@ -21,13 +21,13 @@
         </div>
 
         <div class="cta-row">
-            <button class="btn primary big tab-btn active" data-tab="ops">📊 分析パネル</button>
+            <button class="btn big tab-btn active" data-tab="ops">📊 分析パネル</button>
             <button class="btn big tab-btn" data-tab="post">📝 投稿フォーム</button>
             <button class="btn big tab-btn" data-tab="manage">🗂 投稿管理</button>
             <a class="btn link-btn" href="dashboard-static.html">一覧を見る</a>
         </div>
 
-        <div class="admin-layout single">
+        <div class="admin-layout two-col">
             <aside class="panel admin-section" data-tab="ops">
                 <div class="panel-header">
                     <div>
@@ -35,34 +35,69 @@
                         <h3>ダッシュボード</h3>
                     </div>
                 </div>
-                <div class="panel-body">
-                    <div id="analytics-metrics" class="analytics-grid"></div>
-                    <div class="chart-row">
-                        <div class="chart-card">
-                            <h4>タグ別シェア</h4>
-                            <div id="tag-pie" class="chart-pie"></div>
-                            <div id="tag-legend" class="legend"></div>
+                <div class="panel-body ops-grid">
+                    <div class="ops-main">
+                        <div id="analytics-metrics" class="analytics-grid"></div>
+                        <div class="chart-row">
+                            <div class="chart-card">
+                                <h4>タグ別シェア</h4>
+                                <div id="tag-pie" class="chart-pie"></div>
+                                <div id="tag-legend" class="legend"></div>
+                            </div>
+                            <div class="chart-card">
+                                <h4>記事別 PV</h4>
+                                <div id="case-bars" class="bar-chart"></div>
+                            </div>
                         </div>
-                        <div class="chart-card">
-                            <h4>記事別 PV</h4>
-                            <div id="case-bars" class="bar-chart"></div>
+                        <h4 style="margin-top:14px;">記事別 PV</h4>
+                        <table class="table">
+                            <thead><tr><th>記事</th><th>PV</th><th>推移</th></tr></thead>
+                            <tbody id="analytics-cases"></tbody>
+                        </table>
+                        <h4 style="margin-top:14px;">タグ別 PV / 件数</h4>
+                        <table class="table">
+                            <thead><tr><th>タグ</th><th>PV</th><th>推移</th></tr></thead>
+                            <tbody id="analytics-tags"></tbody>
+                        </table>
+                        <h4 style="margin-top:14px;">記事別 いいね</h4>
+                        <table class="table">
+                            <thead><tr><th>記事</th><th>いいね</th></tr></thead>
+                            <tbody id="analytics-likes"></tbody>
+                        </table>
+                    </div>
+                    <div class="ops-side">
+                        <div class="filter-bar">
+                            <div class="filter-row">
+                                <label for="period-mode">集計期間</label>
+                                <select id="period-mode">
+                                    <option value="all">全期間</option>
+                                    <option value="year">年度</option>
+                                    <option value="month">月間</option>
+                                    <option value="custom">日付指定</option>
+                                </select>
+                                <select id="period-year"></select>
+                                <select id="period-month"></select>
+                                <input type="date" id="period-start">
+                                <input type="date" id="period-end">
+                            </div>
+                        </div>
+                        <div class="filter-card">
+                            <h4>タグで絞り込み</h4>
+                            <div id="filter-tags" class="filter-tag-list"></div>
+                        </div>
+                        <div class="filter-card">
+                            <h4>クイック統計</h4>
+                            <div id="side-totals" class="mini-cards"></div>
+                        </div>
+                        <div class="filter-card">
+                            <h4>タグ別TOP</h4>
+                            <div id="side-top-tags" class="side-list"></div>
+                        </div>
+                        <div class="filter-card">
+                            <h4>最近の投稿</h4>
+                            <div id="side-latest" class="side-list"></div>
                         </div>
                     </div>
-                    <h4 style="margin-top:14px;">記事別 PV</h4>
-                    <table class="table">
-                        <thead><tr><th>記事</th><th>PV</th><th>推移</th></tr></thead>
-                        <tbody id="analytics-cases"></tbody>
-                    </table>
-                    <h4 style="margin-top:14px;">タグ別 PV / 件数</h4>
-                    <table class="table">
-                        <thead><tr><th>タグ</th><th>PV</th><th>推移</th></tr></thead>
-                        <tbody id="analytics-tags"></tbody>
-                    </table>
-                    <h4 style="margin-top:14px;">記事別 いいね</h4>
-                    <table class="table">
-                        <thead><tr><th>記事</th><th>いいね</th></tr></thead>
-                        <tbody id="analytics-likes"></tbody>
-                    </table>
                 </div>
             </aside>
 
@@ -105,9 +140,7 @@
                     <div class="form-grid">
                         <div>
                             <label>タグ（複数選択可）</label><br>
-                            <div class="tag-chip-row" id="tag-chip-row">
-                                <!-- JS でタグ候補を配置 -->
-                            </div>
+                            <div class="tag-chip-row" id="tag-chip-row"></div>
                             <input id="tags-extra" placeholder="自由入力タグ (カンマ区切り)">
                             <p class="helper">選択＋自由入力を合わせてタグ化します。指定が無い場合は「未分類」。</p>
                         </div>
@@ -154,6 +187,8 @@
             </div>
         </div>
     </div>
+
+    <button id="fab-post" class="fab-post" aria-label="投稿フォームを開く">✏️</button>
 
     <script src="js/board-admin.js"></script>
 </body>

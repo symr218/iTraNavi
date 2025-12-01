@@ -17,6 +17,12 @@ const TAG_PRESETS = [
 ];
 
 let editingId = null;
+let filterMode = "all";
+let filterYear = new Date().getFullYear();
+let filterMonth = new Date().getMonth() + 1;
+let filterStart = null;
+let filterEnd = null;
+let filterTags = new Set();
 
 function escapeSvgText(text) {
   const s = String(text ?? "");
@@ -76,6 +82,38 @@ function loadCustomCases() {
 
 function saveCustomCases(list) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+}
+
+function activeCases() {
+  return normalizeCases(loadCustomCases()).filter((c) => !c.deleted);
+}
+
+function parseYearMonth(dateStr) {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return { y: null, m: null };
+  return { y: d.getFullYear(), m: d.getMonth() + 1 };
+}
+
+function filterByPeriod(list) {
+  if (filterMode === "all") return list;
+  if (filterMode === "year") {
+    return list.filter((c) => parseYearMonth(c.date).y === filterYear);
+  }
+  if (filterMode === "month") {
+    return list.filter((c) => {
+      const { y, m } = parseYearMonth(c.date);
+      return y === filterYear && m === filterMonth;
+    });
+  }
+  if (filterMode === "custom" && filterStart && filterEnd) {
+    const start = new Date(filterStart).getTime();
+    const end = new Date(filterEnd).getTime();
+    return list.filter((c) => {
+      const t = new Date(c.date).getTime();
+      return !Number.isNaN(t) && t >= start && t <= end;
+    });
+  }
+  return list;
 }
 
 function normalizeCases(list) {
@@ -191,8 +229,25 @@ async function handleSubmit(e) {
   switchTab("manage"); // 投稿完了後に管理タブへ
 }
 
+function syncPeriodFromInputs() {
+  const modeSel = document.getElementById("period-mode");
+  const yearSel = document.getElementById("period-year");
+  const monthSel = document.getElementById("period-month");
+  const startInput = document.getElementById("period-start");
+  const endInput = document.getElementById("period-end");
+  if (modeSel) filterMode = modeSel.value || "all";
+  if (yearSel && yearSel.value) filterYear = Number(yearSel.value);
+  if (monthSel && monthSel.value) filterMonth = Number(monthSel.value);
+  if (startInput) filterStart = startInput.value || null;
+  if (endInput) filterEnd = endInput.value || null;
+}
+
 function renderAnalytics() {
-  const cases = normalizeCases(loadCustomCases()).filter((c) => !c.deleted);
+  syncPeriodFromInputs();
+  const cases = filterByPeriod(activeCases()).filter((c) => {
+    if (!filterTags.size) return true;
+    return c.tags.some((t) => filterTags.has(t));
+  });
   const totalCases = cases.length;
   const totalPv = cases.reduce((sum, c) => sum + (c.pv || 0), 0);
   const totalLikes = cases.reduce((sum, c) => sum + (c.likes || 0), 0);
@@ -307,6 +362,8 @@ function renderAnalytics() {
         )
         .join("") || "<div class='bar-row'>まだデータがありません</div>";
   }
+
+  renderSidePanels(cases);
 }
 
 function renderTagChips() {
@@ -327,7 +384,7 @@ function renderTagChips() {
 }
 
 function renderManageList() {
-  const list = normalizeCases(loadCustomCases()).filter((c) => !c.deleted);
+  const list = activeCases();
   const host = document.getElementById("manage-list");
   if (!host) return;
   host.innerHTML =
@@ -410,6 +467,148 @@ function switchTab(tab) {
   }
 }
 
+function setupPeriodFilters() {
+  const yearSel = document.getElementById("period-year");
+  const monthSel = document.getElementById("period-month");
+  const modeSel = document.getElementById("period-mode");
+  const startInput = document.getElementById("period-start");
+  const endInput = document.getElementById("period-end");
+  const tagHost = document.getElementById("filter-tags");
+  if (yearSel) {
+    const now = new Date().getFullYear();
+    const years = [];
+    for (let y = now; y >= now - 5; y--) years.push(y);
+    yearSel.innerHTML = years
+      .map((y) => `<option value="${y}" ${y === filterYear ? "selected" : ""}>${y}年</option>`)
+      .join("");
+    yearSel.addEventListener("change", () => {
+      filterYear = Number(yearSel.value);
+      renderAnalytics();
+    });
+  }
+  if (monthSel) {
+    monthSel.innerHTML = Array.from({ length: 12 }, (_, i) => i + 1)
+      .map(
+        (m) =>
+          `<option value="${m}" ${m === filterMonth ? "selected" : ""}>${m}月</option>`
+      )
+      .join("");
+    monthSel.addEventListener("change", () => {
+      filterMonth = Number(monthSel.value);
+      renderAnalytics();
+    });
+  }
+  if (modeSel) {
+    modeSel.addEventListener("change", () => {
+      filterMode = modeSel.value;
+      togglePeriodFields();
+      renderAnalytics();
+    });
+  }
+  if (startInput && endInput) {
+    startInput.addEventListener("change", () => {
+      filterStart = startInput.value;
+      renderAnalytics();
+    });
+    endInput.addEventListener("change", () => {
+      filterEnd = endInput.value;
+      renderAnalytics();
+    });
+  }
+  togglePeriodFields();
+
+  if (tagHost) {
+    tagHost.innerHTML = TAG_PRESETS.map((t) => `<button type="button" class="filter-tag" data-tag="${t}">${t}</button>`).join("");
+    tagHost.querySelectorAll(".filter-tag").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tag = btn.dataset.tag;
+        if (filterTags.has(tag)) {
+          filterTags.delete(tag);
+          btn.classList.remove("active");
+        } else {
+          filterTags.add(tag);
+          btn.classList.add("active");
+        }
+        renderAnalytics();
+      });
+    });
+  }
+}
+
+function resetFormToNew() {
+  editingId = null;
+  const form = document.getElementById("admin-form");
+  if (form) form.reset();
+  document.querySelectorAll(".tag-chip.selected").forEach((chip) => chip.classList.remove("selected"));
+  if (document.getElementById("form-status")) document.getElementById("form-status").textContent = "";
+}
+
+function togglePeriodFields() {
+  const yearSel = document.getElementById("period-year");
+  const monthSel = document.getElementById("period-month");
+  const startInput = document.getElementById("period-start");
+  const endInput = document.getElementById("period-end");
+  if (yearSel) yearSel.style.display = filterMode === "year" || filterMode === "month" ? "inline-flex" : "none";
+  if (monthSel) monthSel.style.display = filterMode === "month" ? "inline-flex" : "none";
+  if (startInput) startInput.style.display = filterMode === "custom" ? "inline-flex" : "none";
+  if (endInput) endInput.style.display = filterMode === "custom" ? "inline-flex" : "none";
+}
+
+function refreshAnalyticsAndRanking() {
+  renderAnalytics();
+}
+
+function renderSidePanels(cases) {
+  const totalsHost = document.getElementById("side-totals");
+  if (totalsHost) {
+    const totalPv = cases.reduce((s, c) => s + (c.pv || 0), 0);
+    const totalLikes = cases.reduce((s, c) => s + (c.likes || 0), 0);
+    const totalTags = new Set(cases.flatMap((c) => c.tags)).size;
+    totalsHost.innerHTML = `
+      <div class="mini-card"><div class="label">期間PV</div><div class="value">${totalPv}</div></div>
+      <div class="mini-card"><div class="label">期間いいね</div><div class="value">${totalLikes}</div></div>
+      <div class="mini-card"><div class="label">ユニークタグ</div><div class="value">${totalTags}</div></div>
+    `;
+  }
+
+  const topTagHost = document.getElementById("side-top-tags");
+  if (topTagHost) {
+    const tagAgg = {};
+    cases.forEach((c) => {
+      const tags = c.tags && c.tags.length ? c.tags : ["未分類"];
+      tags.forEach((t) => {
+        if (!tagAgg[t]) tagAgg[t] = { pv: 0, count: 0 };
+        tagAgg[t].pv += c.pv || 0;
+        tagAgg[t].count += 1;
+      });
+    });
+    const topTags = Object.entries(tagAgg)
+      .sort((a, b) => b[1].pv - a[1].pv)
+      .slice(0, 5);
+    topTagHost.innerHTML =
+      topTags
+        .map(
+          ([tag, v]) =>
+            `<div class="side-item"><div class="title">${tag}</div><div class="meta">${v.count}件 / ${v.pv}PV</div></div>`
+        )
+        .join("") || "<div class='side-item'>データがありません</div>";
+  }
+
+  const latestHost = document.getElementById("side-latest");
+  if (latestHost) {
+    const latest = [...cases].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+    latestHost.innerHTML =
+      latest
+        .map(
+          (c) =>
+            `<div class="side-item"><div class="title">${c.title}</div><div class="meta">${c.date} / ${c.tags.join(
+              ", "
+            )}</div></div>`
+        )
+        .join("") || "<div class='side-item'>データがありません</div>";
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("admin-form");
   if (form) form.addEventListener("submit", handleSubmit);
@@ -422,6 +621,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const manageTable = document.getElementById("manage-table");
   if (manageTable) {
     manageTable.addEventListener("click", handleManageClick);
+  }
+  setupPeriodFilters();
+  const fab = document.getElementById("fab-post");
+  if (fab) {
+    fab.addEventListener("click", () => {
+      if (editingId && !window.confirm("編集中の内容を破棄して新規登録に切り替えます。よろしいですか？")) {
+        return;
+      }
+      resetFormToNew();
+      switchTab("post");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
   }
   switchTab("ops"); // 初期表示は分析パネル
 });
