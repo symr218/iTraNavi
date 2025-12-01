@@ -152,6 +152,8 @@ const SEED_CASES = [
 let customCases = [];
 let currentId = null;
 let searchTerm = "";
+let currentPage = 1;
+const PAGE_SIZE = 50;
 
 function escapeHtml(text) {
   const s = String(text ?? "");
@@ -268,63 +270,112 @@ function findCase(id) {
 
 function renderCards() {
   const list = document.getElementById("case-list");
+  const pager = document.getElementById("list-pagination");
   const liked = loadLikedSet();
   if (!list) return;
   list.innerHTML = "";
 
-  getAllCases()
-    .filter((item) => {
-      if (!searchTerm) return true;
-      const haystack = [
-        item.title,
-        item.summary,
-        item.detail,
-        item.tags.join(" "),
-        item.owner,
-        item.impact,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(searchTerm.toLowerCase());
-    })
-    .forEach((item) => {
-      const tags = item.tags;
-      const isLiked = liked.has(item.id);
-      const primaryTag = tags[0] || "未分類";
-      const tagCol = tagColor(primaryTag);
-      const card = document.createElement("article");
-      card.className = "case-card" + (isLiked ? " liked" : "");
-      card.dataset.id = item.id;
-      card.style.setProperty("--tag-color", tagCol);
-      card.innerHTML = `
-        <div class="color-bar"></div>
-        <div class="thumb">
-          <div class="tag-row">
-            ${tags.map((t) => `<span class="tag">${t}</span>`).join("")}
-          </div>
+  const filtered = getAllCases().filter((item) => {
+    if (!searchTerm) return true;
+    const haystack = [
+      item.title,
+      item.summary,
+      item.detail,
+      item.tags.join(" "),
+      item.owner,
+      item.impact,
+    ]
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(searchTerm.toLowerCase());
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageItems = filtered.slice(start, start + PAGE_SIZE);
+
+  pageItems.forEach((item) => {
+    const tags = item.tags;
+    const isLiked = liked.has(item.id);
+    const primaryTag = tags[0] || "未分類";
+    const tagCol = tagColor(primaryTag);
+    const card = document.createElement("article");
+    card.className = "case-card" + (isLiked ? " liked" : "");
+    card.dataset.id = item.id;
+    card.style.setProperty("--tag-color", tagCol);
+    card.innerHTML = `
+      <div class="color-bar"></div>
+      <div class="thumb">
+        <div class="tag-row">
+          ${tags.map((t) => `<span class="tag">${t}</span>`).join("")}
         </div>
-        <div class="card-body">
-          <div class="card-title">${item.title}</div>
-          <div class="card-summary">${item.summary}</div>
-          <div class="card-meta">
-            <span class="pill">担当 ${item.owner}</span>
-            <span class="pill">効果 ${item.impact}</span>
-          </div>
-          <div class="card-actions">
-            <button class="btn like-btn${isLiked ? " liked" : ""}" data-id="${item.id}">
-              👍 ${isLiked ? "グッド済み" : "グッド"} <span class="like-num">${item.likes}</span>
-            </button>
-            <span class="stat">💬 ${item.comments.length}</span>
-          </div>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${item.title}</div>
+        <div class="card-summary">${item.summary}</div>
+        <div class="card-meta">
+          <span class="pill">担当 ${item.owner}</span>
+          <span class="pill">効果 ${item.impact}</span>
         </div>
-      `;
-      const thumb = card.querySelector(".thumb");
-      if (thumb) {
-        thumb.style.backgroundImage = `url("${item.image}")`;
-        thumb.style.backgroundColor = tagCol;
-      }
-      list.appendChild(card);
-    });
+        <div class="card-actions">
+          <button class="btn like-btn${isLiked ? " liked" : ""}" data-id="${item.id}">
+            👍 ${isLiked ? "グッド済み" : "グッド"} <span class="like-num">${item.likes}</span>
+          </button>
+          <span class="stat">💬 ${item.comments.length}</span>
+        </div>
+      </div>
+    `;
+    const thumb = card.querySelector(".thumb");
+    if (thumb) {
+      thumb.style.backgroundImage = `url("${item.image}")`;
+      thumb.style.backgroundColor = tagCol;
+    }
+    list.appendChild(card);
+  });
+
+  renderPagination(pager, totalPages);
+}
+
+function setPage(page) {
+  const clamped = Math.max(1, page);
+  if (clamped === currentPage) return;
+  currentPage = clamped;
+  renderCards();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function renderPagination(container, totalPages) {
+  if (!container) return;
+  if (totalPages <= 1) {
+    container.innerHTML = "";
+    container.style.display = "none";
+    return;
+  }
+  container.style.display = "flex";
+  container.innerHTML = "";
+
+  const addBtn = (label, page, disabled = false, active = false) => {
+    const btn = document.createElement("button");
+    btn.className = "page-btn" + (active ? " active" : "");
+    btn.textContent = label;
+    btn.disabled = disabled;
+    btn.addEventListener("click", () => setPage(page));
+    container.appendChild(btn);
+  };
+
+  addBtn("前へ", Math.max(1, currentPage - 1), currentPage === 1);
+
+  const windowSize = 5;
+  let start = Math.max(1, currentPage - 2);
+  let end = Math.min(totalPages, start + windowSize - 1);
+  if (end - start < windowSize - 1) start = Math.max(1, end - windowSize + 1);
+
+  for (let p = start; p <= end; p += 1) {
+    addBtn(String(p), p, false, p === currentPage);
+  }
+
+  addBtn("次へ", Math.min(totalPages, currentPage + 1), currentPage === totalPages);
 }
 
 function openDetail(id) {
@@ -500,6 +551,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (searchBox) {
     searchBox.addEventListener("input", (e) => {
       searchTerm = e.target.value;
+       currentPage = 1;
       renderCards();
     });
   }

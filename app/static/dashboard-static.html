@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>社内IT改善掲示板 | 静的サンプル</title>
+    <title>社内IT改善掲示板</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -12,11 +12,10 @@
             <div>
                 <p class="eyebrow">社内IT 改善事例ギャラリー</p>
                 <h1>Improvement Board</h1>
-                <p class="lede">写真と概要を一覧で確認し、クリックで詳細・コメント・グッドができます。</p>
+                <p class="lede">みんなの改善アイデアを写真と一緒に見渡せます。気になるカードを開いて詳細を読み、コメントやグッドでフィードバックできます。</p>
             </div>
             <div class="header-actions">
-                <a class="btn primary link-btn" href="dashboard-admin.html">投稿ページを開く</a>
-                <div class="status-chip">静的デモ</div>
+                <a class="btn primary link-btn" href="dashboard-admin.html">管理ページへ</a>
                 <div class="timestamp">最終更新: <span id="current-time">--:--:--</span></div>
                 <input id="search-box" class="search-box" placeholder="タイトル・タグ・概要で検索" />
             </div>
@@ -25,6 +24,7 @@
         <section class="board-grid" id="case-list">
             <!-- JS でカードを差し込み -->
         </section>
+        <div id="list-pagination" class="pagination"></div>
     </div>
 
     <div class="drawer-overlay" id="drawer-overlay"></div>

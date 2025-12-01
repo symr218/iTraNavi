@@ -11,20 +11,18 @@
         <div class="admin-hero">
             <div>
                 <p class="eyebrow">IT 管理者向け</p>
-                <h1>改善事例を管理</h1>
+                <h1>Improvement Ops Hub</h1>
                 <p class="lede">投稿と運用分析を一画面で。よく使う操作にすぐアクセスできます。</p>
             </div>
             <div class="header-actions">
                 <a class="btn primary link-btn" href="dashboard-static.html">一覧を見る</a>
-                <div class="status-chip">ローカル保存</div>
             </div>
         </div>
 
         <div class="cta-row">
             <button class="btn big tab-btn active" data-tab="ops">📊 分析パネル</button>
             <button class="btn big tab-btn" data-tab="post">📝 投稿フォーム</button>
-            <button class="btn big tab-btn" data-tab="manage">🗂 投稿管理</button>
-            <a class="btn link-btn" href="dashboard-static.html">一覧を見る</a>
+            <button class="btn big tab-btn" data-tab="manage">📑 投稿管理</button>
         </div>
 
         <div class="admin-layout two-col">
@@ -178,17 +176,55 @@
                                 <th>担当</th>
                                 <th>PV</th>
                                 <th>いいね</th>
+                                <th>コメント</th>
                                 <th>操作</th>
                             </tr>
                         </thead>
                         <tbody id="manage-list"></tbody>
                     </table>
+                    <div id="manage-pagination" class="pagination"></div>
                 </div>
             </div>
         </div>
     </div>
 
     <button id="fab-post" class="fab-post" aria-label="投稿フォームを開く">✏️</button>
+
+    <div class="drawer-overlay" id="admin-drawer-overlay"></div>
+    <div class="detail-drawer" id="admin-detail-drawer">
+        <div class="drawer-header">
+            <div>
+                <p class="eyebrow" id="admin-detail-tags">タグ</p>
+                <h2 id="admin-detail-title">タイトル</h2>
+                <p class="lede" id="admin-detail-summary">概要</p>
+            </div>
+            <button class="icon-btn" id="admin-drawer-close" aria-label="閉じる">✕</button>
+        </div>
+        <div class="drawer-body">
+            <div class="detail-hero" id="admin-detail-hero"></div>
+            <div class="detail-meta">
+                <span class="pill" id="admin-detail-owner">担当 -</span>
+                <span class="pill" id="admin-detail-impact">効果 -</span>
+                <span class="pill" id="admin-detail-date">公開日: -</span>
+                <span class="pill" id="admin-detail-pv">PV: -</span>
+                <span class="pill" id="admin-detail-likes">いいね: -</span>
+            </div>
+            <div class="detail-links">
+                <a id="admin-detail-pdf" class="btn outline hidden" target="_blank" rel="noopener">📄 添付PDFを開く</a>
+            </div>
+            <article id="admin-detail-body" class="detail-body"></article>
+
+            <div class="social-bar">
+                <div class="comment-count">👍 <span id="admin-like-count">0</span> 件</div>
+                <div class="comment-count">💬 <span id="admin-comment-count">0</span> 件</div>
+            </div>
+
+            <section class="comments">
+                <h3>コメント</h3>
+                <div id="admin-comment-list" class="comment-list"></div>
+            </section>
+        </div>
+    </div>
 
     <script src="js/board-admin.js"></script>
 </body>

@@ -501,3 +501,28 @@ textarea { resize: vertical; }
   body { padding: 18px; }
   .detail-drawer { width: 100%; }
 }
+
+.pagination {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 12px;
+}
+.pagination .page-btn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+.pagination .page-btn.active {
+  background: linear-gradient(135deg, var(--accent), #60a5fa);
+  border-color: var(--accent);
+  color: #fff;
+}
+.pagination .page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

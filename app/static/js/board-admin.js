@@ -17,6 +17,9 @@ const TAG_PRESETS = [
 ];
 
 let editingId = null;
+let formDirty = false;
+let managePage = 1;
+const MANAGE_PAGE_SIZE = 50;
 let filterMode = "all";
 let filterYear = new Date().getFullYear();
 let filterMonth = new Date().getMonth() + 1;
@@ -56,6 +59,16 @@ function tagColor(tag) {
   return map[tag] || "#2563eb";
 }
 
+function escapeHtml(text) {
+  const s = String(text ?? "");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function generateFallbackImage(title = "New Case", primaryTag = "未分類") {
   const safe = escapeSvgText(title.slice(0, 28) || "Case");
   const base = tagColor(primaryTag);
@@ -84,6 +97,19 @@ function saveCustomCases(list) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
 }
 
+function markDirty() {
+  formDirty = true;
+}
+
+function markPristine() {
+  formDirty = false;
+}
+
+function confirmDiscardIfDirty() {
+  if (!formDirty) return true;
+  return window.confirm("投稿フォームの変更が保存されていません。切り替えてもよろしいですか？");
+}
+
 function activeCases() {
   return normalizeCases(loadCustomCases()).filter((c) => !c.deleted);
 }
@@ -92,6 +118,11 @@ function parseYearMonth(dateStr) {
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return { y: null, m: null };
   return { y: d.getFullYear(), m: d.getMonth() + 1 };
+}
+
+function parseDateSafe(str) {
+  const t = Date.parse(str);
+  return Number.isNaN(t) ? 0 : t;
 }
 
 function filterByPeriod(list) {
@@ -216,6 +247,7 @@ async function handleSubmit(e) {
 
   saveCustomCases(list);
   renderAnalytics();
+  managePage = 1;
   renderManageList();
 
   const status = document.getElementById("form-status");
@@ -226,6 +258,7 @@ async function handleSubmit(e) {
   e.target.reset();
   document.querySelectorAll(".tag-chip.selected").forEach((chip) => chip.classList.remove("selected"));
   editingId = null;
+  markPristine();
   switchTab("manage"); // 投稿完了後に管理タブへ
 }
 
@@ -378,20 +411,25 @@ function renderTagChips() {
     chip.textContent = name;
     chip.addEventListener("click", () => {
       chip.classList.toggle("selected");
+      markDirty();
     });
     row.appendChild(chip);
   });
 }
 
 function renderManageList() {
-  const list = activeCases();
+  const all = activeCases().sort((a, b) => parseDateSafe(b.date) - parseDateSafe(a.date));
+  const totalPages = Math.max(1, Math.ceil(all.length / MANAGE_PAGE_SIZE));
+  if (managePage > totalPages) managePage = totalPages;
+  const start = (managePage - 1) * MANAGE_PAGE_SIZE;
+  const list = all.slice(start, start + MANAGE_PAGE_SIZE);
   const host = document.getElementById("manage-list");
   if (!host) return;
   host.innerHTML =
     list
       .map(
         (c) => `
-      <tr>
+      <tr data-id="${c.id}">
         <td>
           <div class="manage-title">${c.title}</div>
           <div class="manage-meta">${c.date} / ${c.tags.join(", ")}</div>
@@ -399,6 +437,7 @@ function renderManageList() {
         <td>${c.owner}</td>
         <td>${c.pv}</td>
         <td>${c.likes}</td>
+        <td>${c.comments.length}</td>
         <td>
           <div class="manage-actions">
             <button class="btn small" data-action="edit" data-id="${c.id}">編集</button>
@@ -408,12 +447,62 @@ function renderManageList() {
       </tr>
     `
       )
-      .join("") || "<tr><td colspan='5'>まだ投稿がありません</td></tr>";
+      .join("") || "<tr><td colspan='6'>まだ投稿がありません</td></tr>";
+
+  renderManagePagination(totalPages);
+}
+
+function setManagePage(page) {
+  const clamped = Math.max(1, page);
+  if (clamped === managePage) return;
+  managePage = clamped;
+  renderManageList();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function renderManagePagination(totalPages) {
+  const host = document.getElementById("manage-pagination");
+  if (!host) return;
+  if (totalPages <= 1) {
+    host.innerHTML = "";
+    host.style.display = "none";
+    return;
+  }
+  host.style.display = "flex";
+  host.innerHTML = "";
+
+  const addBtn = (label, page, disabled = false, active = false) => {
+    const btn = document.createElement("button");
+    btn.className = "page-btn" + (active ? " active" : "");
+    btn.textContent = label;
+    btn.disabled = disabled;
+    btn.addEventListener("click", () => setManagePage(page));
+    host.appendChild(btn);
+  };
+
+  addBtn("前へ", Math.max(1, managePage - 1), managePage === 1);
+
+  const windowSize = 5;
+  let start = Math.max(1, managePage - 2);
+  let end = Math.min(totalPages, start + windowSize - 1);
+  if (end - start < windowSize - 1) start = Math.max(1, end - windowSize + 1);
+
+  for (let p = start; p <= end; p += 1) {
+    addBtn(String(p), p, false, p === managePage);
+  }
+
+  addBtn("次へ", Math.min(totalPages, managePage + 1), managePage === totalPages);
 }
 
 function handleManageClick(e) {
   const btn = e.target.closest("button[data-action]");
-  if (!btn) return;
+  if (!btn) {
+    const row = e.target.closest("tr[data-id]");
+    if (row) {
+      openManageDetail(row.dataset.id);
+    }
+    return;
+  }
   const id = btn.dataset.id;
   const action = btn.dataset.action;
   if (action === "delete") {
@@ -429,6 +518,7 @@ function handleManageClick(e) {
     return;
   }
   if (action === "edit") {
+    if (!confirmDiscardIfDirty()) return;
     const item = loadCustomCases().find((c) => String(c.id) === String(id));
     if (!item) return;
     editingId = item.id;
@@ -442,6 +532,7 @@ function handleManageClick(e) {
     document.querySelectorAll(".tag-chip").forEach((chip) => {
       chip.classList.toggle("selected", item.tags?.includes(chip.dataset.value));
     });
+    markPristine();
     switchTab("post");
     const status = document.getElementById("form-status");
     if (status) status.textContent = "編集モードで開きました。変更後に保存してください。";
@@ -541,6 +632,7 @@ function resetFormToNew() {
   if (form) form.reset();
   document.querySelectorAll(".tag-chip.selected").forEach((chip) => chip.classList.remove("selected"));
   if (document.getElementById("form-status")) document.getElementById("form-status").textContent = "";
+  markPristine();
 }
 
 function togglePeriodFields() {
@@ -609,9 +701,78 @@ function renderSidePanels(cases) {
   }
 }
 
+function renderManageComments(list) {
+  const container = document.getElementById("admin-comment-list");
+  if (!container) return;
+  container.innerHTML = "";
+  list.forEach((c) => {
+    const div = document.createElement("div");
+    div.className = "comment";
+    const who = [c?.name || "匿名", c?.team].filter(Boolean).join(" / ");
+    div.innerHTML = `
+      <div class="comment-head">
+        <span>${escapeHtml(who)}</span>
+        <span>${new Date().toLocaleDateString("ja-JP")}</span>
+      </div>
+      <div class="comment-body">${escapeHtml(c?.text)}</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function openManageDetail(id) {
+  const item = activeCases().find((c) => String(c.id) === String(id));
+  if (!item) return;
+  const tagsText = (item.tags && item.tags.length ? item.tags : ["未分類"]).join(" / ");
+  const detailDrawer = document.getElementById("admin-detail-drawer");
+  document.getElementById("admin-detail-title").textContent = item.title || "";
+  document.getElementById("admin-detail-summary").textContent = item.summary || "";
+  document.getElementById("admin-detail-body").textContent = item.detail || "";
+  document.getElementById("admin-detail-owner").textContent = `担当 ${item.owner || "-"}`;
+  document.getElementById("admin-detail-impact").textContent = `効果 ${item.impact || "-"}`;
+  document.getElementById("admin-detail-date").textContent = `公開日: ${item.date || "-"}`;
+  document.getElementById("admin-detail-pv").textContent = `PV: ${item.pv ?? "-"}`;
+  document.getElementById("admin-detail-likes").textContent = `いいね: ${item.likes ?? "-"}`;
+  document.getElementById("admin-like-count").textContent = item.likes ?? 0;
+  document.getElementById("admin-comment-count").textContent = item.comments?.length ?? 0;
+  document.getElementById("admin-detail-tags").textContent = tagsText;
+  const hero = document.getElementById("admin-detail-hero");
+  if (hero) hero.style.backgroundImage = `url("${item.image || generateFallbackImage(item.title, item.tags?.[0])}")`;
+
+  const pdfLink = document.getElementById("admin-detail-pdf");
+  if (pdfLink) {
+    if (item.pdfData) {
+      pdfLink.classList.remove("hidden");
+      pdfLink.href = item.pdfData;
+      pdfLink.download = item.pdfName || `${item.title || "attachment"}.pdf`;
+      pdfLink.textContent = item.pdfName ? `📄 ${item.pdfName} をダウンロード` : "📄 添付PDFを開く";
+    } else {
+      pdfLink.classList.add("hidden");
+      pdfLink.removeAttribute("href");
+    }
+  }
+
+  renderManageComments(item.comments || []);
+
+  if (detailDrawer) detailDrawer.classList.add("open");
+  const overlay = document.getElementById("admin-drawer-overlay");
+  if (overlay) overlay.classList.add("open");
+}
+
+function closeManageDetail() {
+  const detailDrawer = document.getElementById("admin-detail-drawer");
+  if (detailDrawer) detailDrawer.classList.remove("open");
+  const overlay = document.getElementById("admin-drawer-overlay");
+  if (overlay) overlay.classList.remove("open");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("admin-form");
-  if (form) form.addEventListener("submit", handleSubmit);
+  if (form) {
+    form.addEventListener("submit", handleSubmit);
+    form.addEventListener("input", markDirty);
+    form.addEventListener("change", markDirty);
+  }
   renderTagChips();
   renderAnalytics();
   renderManageList();
@@ -622,13 +783,15 @@ document.addEventListener("DOMContentLoaded", () => {
   if (manageTable) {
     manageTable.addEventListener("click", handleManageClick);
   }
+  const drawerClose = document.getElementById("admin-drawer-close");
+  if (drawerClose) drawerClose.addEventListener("click", closeManageDetail);
+  const drawerOverlay = document.getElementById("admin-drawer-overlay");
+  if (drawerOverlay) drawerOverlay.addEventListener("click", closeManageDetail);
   setupPeriodFilters();
   const fab = document.getElementById("fab-post");
   if (fab) {
     fab.addEventListener("click", () => {
-      if (editingId && !window.confirm("編集中の内容を破棄して新規登録に切り替えます。よろしいですか？")) {
-        return;
-      }
+      if (!confirmDiscardIfDirty()) return;
       resetFormToNew();
       switchTab("post");
       window.scrollTo({ top: 0, behavior: "smooth" });
