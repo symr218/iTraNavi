@@ -230,6 +230,20 @@ textarea { resize: vertical; }
 .helper { font-size: 12px; color: var(--muted); }
 .success { color: #16a34a; font-weight: 600; }
 .link-btn { text-decoration: none; }
+.btn.primary.link-btn {
+  background-size: 160% 160%;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.2);
+}
+.btn.primary.link-btn:hover {
+  transform: translateY(-2px);
+  background-position: 80% 20%;
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.24);
+  filter: saturate(1.05);
+}
+.btn.primary.link-btn:active {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+}
 .form-card input, .form-card textarea { font-size: 16px; width: 100%; padding: 16px 18px; }
 .form-card textarea#summary { min-height: 200px; }
 .form-card textarea#detail { min-height: 360px; }
@@ -423,6 +437,26 @@ textarea { resize: vertical; }
 .manage-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .manage-title { font-weight: 700; }
 .manage-meta { font-size: 12px; color: var(--muted); }
+#manage-table tbody tr {
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.16s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+#manage-table tbody tr:hover {
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.05), rgba(37, 99, 235, 0.015));
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+#manage-table tbody tr:hover td { border-bottom-color: rgba(37, 99, 235, 0.28); }
+#manage-table tbody tr:hover .manage-title { color: var(--accent); }
+.manage-actions {
+  transition: transform 0.16s ease, opacity 0.16s ease;
+  opacity: 0.9;
+}
+#manage-table tbody tr:hover .manage-actions {
+  transform: translateX(2px);
+  opacity: 1;
+}
 
 .filter-bar {
   border: 1px solid var(--border);
