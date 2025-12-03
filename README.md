@@ -11,6 +11,7 @@ Static board/admin UIs now talk to a small Flask API with SQLite persistence and
 - `app/static/db-view.html` / `app/static/js/db-view.js` - simple DB viewer (read-only list of cases/comments).
 - `server/app.py` - Flask API + SQLite storage + upload handler (`/api/*`, `/uploads/*`).
 - `requirements.txt` - Python deps.
+- `DEPLOY.md` - production-ish runbook (WSGI + reverse proxy examples).
 
 ## Setup
 ```bash
