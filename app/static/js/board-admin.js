@@ -235,8 +235,8 @@ async function handleSubmit(e) {
       owner,
       impact,
       date,
-      likes: 0,
-      pv: Math.floor(Math.random() * 300) + 120, // mock PV
+    likes: 0,
+    pv: 0,
       comments: [],
       image: imageData || generateFallbackImage(title, tags[0] || "未分類"),
       pdfData,

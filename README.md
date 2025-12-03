@@ -1,84 +1,20 @@
-# CloudIDE Dashboard
+# iTraNavi Static Pages
 
-A small Flask-based real-time dashboard. CPU, memory, disk, and network metrics are generated server-side and fetched every 3 seconds from a REST API to update the page. Sessions are stored in SQLite so the app can count active users.
+This repository now only contains the standalone static mock pages for the improvement board (`dashboard-static`) and its admin console (`dashboard-admin`). There is no Flask server, database, or migration setup required.
 
-## Features
-- Dashboard at `/` with auto-refresh every 3 seconds.
-- REST endpoint `/api/dashboard-data` returns JSON metrics plus active user count.
-- Health check at `/health`.
-- Cookie-based session upsert into the `user_session` table; sessions seen within 5 minutes are counted as active.
-- Host/port can be set via CLI flags (`--host`, `--port`) or `.env` (`HOST`, `PORT`).
+## Files
+- `app/static/dashboard-static.html` - public board with search, filters, pagination, likes, and comments.
+- `app/static/js/board.js` - front-end logic for the board page (seed data, localStorage persistence, detail drawer).
+- `app/static/dashboard-admin.html` - admin/ops view with analytics tab, post form, and management table.
+- `app/static/js/board-admin.js` - front-end logic for the admin page (charts, form handling, localStorage cases).
+- `app/static/css/style.css` - shared styles for both pages.
 
-## Requirements
-- Python 3.8+
-- pip (virtualenv recommended)
-- SQLite bundled; switch to PostgreSQL, etc. via `DATABASE_URL`.
+## How to View
+- Open either HTML file directly in your browser from `app/static/`.
+- Or run a simple static server from the repo root:
+  - `python -m http.server 8000 -d app/static`
+  - Then visit `http://localhost:8000/dashboard-static.html` or `http://localhost:8000/dashboard-admin.html`.
 
-## Setup
-```bash
-python -m venv .venv
-source .venv/bin/activate        # Windows: .\venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-Optional `.env`:
-```env
-FLASK_ENV=development
-HOST=0.0.0.0
-PORT=5000
-SECRET_KEY=change-me-in-production
-DATABASE_URL=sqlite:///dev.db
-```
-
-## Run
-- Dev: `python app.py --host 0.0.0.0 --port 5000`
-- macOS/Linux helper: `./run.sh`
-- Windows PowerShell: `./run.ps1 -Mode dev -Host 0.0.0.0 -Port 5000`
-- Windows batch: `run.bat`
-- Production-style (Waitress): `./run.ps1 -Mode prod -Host 0.0.0.0 -Port 5000`
-
-## API and Pages
-| Path | Method | Description |
-| --- | --- | --- |
-| `/` | GET | Dashboard page (auto-refreshes every 3s) |
-| `/api/dashboard-data` | GET | JSON metrics (`cpu_usage`, `memory_usage`, `disk_usage`, `network_latency`, `active_users`, `total_requests`, `timestamp`) |
-| `/health` | GET | Health check returning `{ "status": "healthy" }` |
-
-## Database and Migrations
-- Default: SQLite `dev.db` in the project root.
-- Flask-Migrate/Alembic is included. After the first setup:
-```bash
-export FLASK_APP=app:create_app
-flask db init      # only once
-flask db migrate -m "init"
-flask db upgrade
-```
-- For another DB: `DATABASE_URL=postgresql+psycopg://user:pass@host:5432/dbname`
-
-## Behavior Notes
-- Client polls with Fetch + `setInterval` (3s).
-- Issues a `session_id` cookie and upserts `UserSession`; rows with `last_seen` in the last 5 minutes are active.
-- Detects `prefers-color-scheme: dark` and adds `dark-mode` to the body (CSS can be extended).
-
-## Verification
-- macOS/Linux: `./verify.sh` (requires `netstat` and `curl`) checks port 5000 plus `/health`, `/api/dashboard-data`, `/`.
-- Manual: `curl http://localhost:5000/health` and `curl http://localhost:5000/api/dashboard-data`
-
-## Project Layout
-```
-app.py                 # entry point with CLI flags
-run.sh / run.ps1 / run.bat
-app/
-  __init__.py          # Flask app factory, DB setup
-  routes.py            # views, REST API, health check
-  models.py            # UserSession model
-  templates/dashboard.html
-  static/css/style.css
-  static/js/dashboard.js
-  static/dashboard-static.html  # UI prototype, not served by Flask
-migrations/            # for Flask-Migrate (created after init)
-requirements.txt
-```
-
-## License
-MIT
+## Notes
+- All data is client-side only and stored in `localStorage` (`customCases`, `likedCaseIds`, etc.).
+- Removed backend-related files and instructions so the repository is focused solely on the static and admin pages.
